@@ -53,7 +53,7 @@ function cargarLeaderboard() {
 
           // Si el jugador tiene asignado un consecutivo, se construye la ruta de la imagen
           if (asignacion[entry.name]) {
-            const rutaImagen = `${entry.name}_${asignacion[entry.name]}.PNG`;
+            const rutaImagen = `${entry.name}_${asignacion[entry.name]}.png`;
             imagenHTML = `<img src="${rutaImagen}" class="miniatura" onerror="this.style.display='none'">`;
           }
 
@@ -73,3 +73,4 @@ function cargarLeaderboard() {
 
 cargarLeaderboard();
 setInterval(cargarLeaderboard, 5000);
+
