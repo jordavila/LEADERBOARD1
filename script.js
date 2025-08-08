@@ -11,53 +11,58 @@ function cargarLeaderboard() {
       try {
         const json = JSON.parse(text.substr(47).slice(0, -2));
 
-        // Extraer filas como objetos {name, score}
-        const rows = json.table.rows.map(r => ({
-          name: r.c[0]?.v || "Sin nombre",
-          score: parseInt(r.c[1]?.v || "0")
-        }));
+        // Mapeamos filas con soporte para valores calculados por fórmula
+        const rows = json.table.rows.map(r => {
+          const rawScore = r.c[1]?.v ?? r.c[1]?.f ?? 0; // v si existe, si no f, si no 0
+          return {
+            name: r.c[0]?.v || "Sin nombre",
+            score: parseInt(rawScore) || 0
+          };
+        });
 
-        // Ordenar por puntaje descendente
-        rows.sort((a, b) => b.score - a.score);
+        // ----------- 1) Determinar asignación de imágenes usando el orden de la hoja (filas 2–5) -----------
 
-        // Filtrar jugadores activos entre filas 2 y 5 (índices 1 a 4)
+        // Jugadores activos en filas 2 a 5 según hoja original
         const jugadoresActivos = rows.slice(1, 5).filter(j => j.name !== "Sin nombre");
 
-        // Determinar la asignación de consecutivos según la cantidad de jugadores activos
         let asignacion = {};
         if (jugadoresActivos.length === 2) {
-          asignacion[jugadoresActivos[0].name] = 1; // Alegre
-          asignacion[jugadoresActivos[1].name] = 4; // Llorando
+          asignacion[jugadoresActivos[0].name] = 1;
+          asignacion[jugadoresActivos[1].name] = 4;
         } 
         else if (jugadoresActivos.length === 3) {
-          asignacion[jugadoresActivos[0].name] = 1; // Alegre
-          asignacion[jugadoresActivos[1].name] = 2; // Serio
-          asignacion[jugadoresActivos[2].name] = 4; // Llorando
+          asignacion[jugadoresActivos[0].name] = 1;
+          asignacion[jugadoresActivos[1].name] = 2;
+          asignacion[jugadoresActivos[2].name] = 4;
         } 
         else if (jugadoresActivos.length > 3) {
-          asignacion[jugadoresActivos[0].name] = 1; // Alegre
-          asignacion[jugadoresActivos[1].name] = 2; // Serio
-          asignacion[jugadoresActivos[2].name] = 3; // Triste
-          asignacion[jugadoresActivos[3].name] = 4; // Llorando
+          asignacion[jugadoresActivos[0].name] = 1;
+          asignacion[jugadoresActivos[1].name] = 2;
+          asignacion[jugadoresActivos[2].name] = 3;
+          asignacion[jugadoresActivos[3].name] = 4;
         }
 
-        // Limpiar leaderboard antes de redibujar
+        // ----------- 2) Ordenar para mostrar el leaderboard por kills (segunda columna) -----------
+        const top = [...rows].sort((a, b) => b.score - a.score).slice(0, 10);
+
+        // Limpiar antes de dibujar
         container.innerHTML = "";
 
-        // Mostrar el top 10
-        rows.slice(0, 10).forEach(entry => {
+        top.forEach(entry => {
           const div = document.createElement("div");
           div.className = "entry";
 
           let imagenHTML = "";
 
-          // Si el jugador tiene asignado un consecutivo, se construye la ruta de la imagen
+          // Limpiar nombre para la ruta del archivo
+          const nombreLimpio = entry.name.trim().replace(/\s+/g, '_');
+
           if (asignacion[entry.name]) {
-            const rutaImagen = `${entry.name}_${asignacion[entry.name]}.png`;
+            const rutaImagen = `${nombreLimpio}_${asignacion[entry.name]}.png`;
+            console.log("Intentando cargar:", rutaImagen); // Depuración
             imagenHTML = `<img src="${rutaImagen}" class="miniatura" onerror="this.style.display='none'">`;
           }
 
-          // Construir el HTML de la entrada con posible miniatura
           div.innerHTML = `<div class="name">${imagenHTML} ${entry.name}</div><div class="score">${entry.score}</div>`;
           container.appendChild(div);
         });
@@ -73,4 +78,3 @@ function cargarLeaderboard() {
 
 cargarLeaderboard();
 setInterval(cargarLeaderboard, 5000);
-
