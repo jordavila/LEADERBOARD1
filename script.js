@@ -11,62 +11,44 @@ function cargarLeaderboard() {
       try {
         const json = JSON.parse(text.substr(47).slice(0, -2));
 
-        // Mapeamos filas con soporte para valores calculados por fórmula
         const rows = json.table.rows.map(r => {
-          const rawScore = r.c[1]?.v ?? r.c[1]?.f ?? 0; // v si existe, si no f, si no 0
-          return {
-            name: r.c[0]?.v || "Sin nombre",
-            score: parseInt(rawScore) || 0
-          };
+          const nameCell = r.c[0];
+          const killsCell = r.c[1];
+
+          const name = nameCell?.v || "Sin nombre";
+          // Si viene de fórmula, usamos v, f o formattedValue
+          const score = parseInt(
+            killsCell?.v ??
+            killsCell?.f ??
+            killsCell?.formattedValue ??
+            "0"
+          );
+
+          return { name, score: isNaN(score) ? 0 : score };
         });
 
-        // ----------- 1) Determinar asignación de imágenes usando el orden de la hoja (filas 2–5) -----------
+        // Ordenar por kills (score) descendente
+        rows.sort((a, b) => b.score - a.score);
 
-        // Jugadores activos en filas 2 a 5 según hoja original
-        const jugadoresActivos = rows.slice(1, 5).filter(j => j.name !== "Sin nombre");
-
-        let asignacion = {};
-        if (jugadoresActivos.length === 2) {
-          asignacion[jugadoresActivos[0].name] = 1;
-          asignacion[jugadoresActivos[1].name] = 4;
-        } 
-        else if (jugadoresActivos.length === 3) {
-          asignacion[jugadoresActivos[0].name] = 1;
-          asignacion[jugadoresActivos[1].name] = 2;
-          asignacion[jugadoresActivos[2].name] = 4;
-        } 
-        else if (jugadoresActivos.length > 3) {
-          asignacion[jugadoresActivos[0].name] = 1;
-          asignacion[jugadoresActivos[1].name] = 2;
-          asignacion[jugadoresActivos[2].name] = 3;
-          asignacion[jugadoresActivos[3].name] = 4;
-        }
-
-        // ----------- 2) Ordenar para mostrar el leaderboard por kills (segunda columna) -----------
-        const top = [...rows].sort((a, b) => b.score - a.score).slice(0, 10);
-
-        // Limpiar antes de dibujar
+        const top = rows.slice(0, 10);
         container.innerHTML = "";
 
-        top.forEach(entry => {
+        top.forEach((entry, index) => {
           const div = document.createElement("div");
           div.className = "entry";
 
-          let imagenHTML = "";
+          // Imagen: nombre en minúsculas y espacios reemplazados por "_"
+          const imgName = entry.name.toLowerCase().replace(/\s+/g, "_") + ".png";
 
-          // Limpiar nombre para la ruta del archivo
-          const nombreLimpio = entry.name.trim().replace(/\s+/g, '_');
+          div.innerHTML = `
+            <div class="position">#${index + 1}</div>
+            <img src="${imgName}" alt="${entry.name}" class="player-img" onerror="this.style.display='none'">
+            <div class="name">${entry.name}</div>
+            <div class="score">${entry.score}</div>
+          `;
 
-          if (asignacion[entry.name]) {
-            const rutaImagen = `${nombreLimpio}_${asignacion[entry.name]}.png`;
-            console.log("Intentando cargar:", rutaImagen); // Depuración
-            imagenHTML = `<img src="${rutaImagen}" class="miniatura" onerror="this.style.display='none'">`;
-          }
-
-          div.innerHTML = `<div class="name">${imagenHTML} ${entry.name}</div><div class="score">${entry.score}</div>`;
           container.appendChild(div);
         });
-
       } catch (error) {
         container.innerHTML = `<div style="color:red;padding:10px">⚠️ Error al procesar los datos: ${error.message}</div>`;
       }
